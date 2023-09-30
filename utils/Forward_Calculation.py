@@ -1,78 +1,53 @@
 import numpy as np
-import sympy as sp
+from scipy.linalg import solve
 
 class VNetwork:
-    C = 0.8
-    n = 0.5
 
-    def __init__(self,pin:float,pout:float,node_num:int):
-        self.pin = pin
-        self.pout = pout
+    def __init__(self,node_num:int,edges:list,out_node:list[int],pressure_dict:dict):
         self.node_num = node_num
-        self.population_size = 100
-        self.crossover_rate = 0.8
-        self.mutation_rate = 0.1
-        self.population = np.random.rand(self.population_size,node_num) * 20 - 10
-        pass
+        self.edges = edges
+        self.out_node = out_node
+        self.pressure_dict = pressure_dict
+        self.R = np.ones((len(edges), 1)) * 0.5
+        self.P = np.random.rand(node_num, 1) * 10
+        self.P = self.P[1:]
+        self.rho = np.ones((len(edges), 1))
 
-    def flow(self,p1,p2):
-        result = self.C * np.abs(p1 - p2) ** self.n * np.sign(p1 - p2)
-        return result
+    def flow_equation(self,BP,H,R):
+        return np.sign(BP + H) * np.sqrt(np.abs(BP + H) / R)
     
-    def objective(self,population):
-        Qin = self.flow(self.pin,population[:,0])
-        Qout = self.flow(population[:,-1],self.pout)
-        Q12 = self.flow(population[:,0],population[:,1])
-        Q23 = self.flow(population[:,1],population[:,2])
-        Q13 = self.flow(population[:,0],population[:,2])
+    def make_B(self):
+        edges = self.edges
+        node_num = self.node_num
+        B = np.zeros((node_num,len(edges)))
+        for i in range(len(edges)):
+            B[edges[i][0],i] = 1
+            B[edges[i][1],i] = -1
+        return B[1:].T
+    
+    def jacobian(self,B,BP,H,R):
+        diag_elements = 0.5 / (np.sqrt(R * np.abs(BP + H))).flatten()
+        J = np.dot(B.T, B * diag_elements[:, np.newaxis])
+        return J
+    
+    def newton_method(self,tol=1e-6, max_iter=1000):
+        P = self.P
+        B = self.make_B()
+        H = np.array([self.pressure_dict[edge] for edge in self.edges]).reshape(-1, 1)
+        R = self.R
+        for _ in range(max_iter):
+            BP = np.dot(B, P)
+            Q = self.flow_equation(BP, H, R)
+            J = self.jacobian(B, BP, H, R)
+            delta_P = solve(J, np.dot(B.T, Q))
+            P -= delta_P
+            
+            if np.linalg.norm(delta_P) < tol:
+                break
+        P = P.tolist()
+        P = [i[0] for i in P]
+        Q = Q.tolist()
+        Q = [i[0] for i in Q]
+        
+        return P,Q
 
-        eq1 = np.abs(Qin + Q12 + Q13)
-        eq2 = np.abs(Q12 + Q23)
-        eq3 = np.abs(Q13 + Q23 + Qout)
-
-        result = eq1 + eq2 + eq3
-        return result
-    
-    def select_parent(self,population):
-        fitness = self.objective(population)
-        fitness_prob = 1/(1+fitness)
-        fitness_prob = fitness_prob/np.sum(fitness_prob)
-        parent_index = np.random.choice(np.arange(self.population_size),size=self.population_size // 2,p=fitness_prob)
-        return parent_index
-    
-    def crossover(self,population):
-        offspring = []
-        parent_index = self.select_parent(population)
-        parent = self.population[parent_index]
-        for i in range(0,len(parent),2):
-            parent1 = parent[i]
-            parent2 = parent[i+1]
-            if np.random.rand() < self.crossover_rate:
-                crossover_point = np.random.randint(1,self.node_num)
-                child1 = np.concatenate((parent1[:crossover_point],parent2[crossover_point:]))
-                child2 = np.concatenate((parent2[:crossover_point],parent1[crossover_point:]))
-            else:
-                child1 = parent1
-                child2 = parent2
-            offspring.extend([child1,child2])
-        offspring = np.array(offspring)
-        return offspring
-    
-    def mutation(self,population):
-        offspring = self.crossover(population)
-        for i in range(len(offspring)):
-            if np.random.rand() < self.mutation_rate:
-                mutation_point = np.random.randint(self.node_num)
-                offspring[i][mutation_point] += np.random.rand() * 2
-        return offspring
-    
-    def main(self):
-        offspring = self.mutation(self.population)
-        offspring_fitness = self.objective(offspring)
-        population_fitness = self.objective(self.population)
-        combined_population = np.concatenate((self.population,offspring))
-        combined_fitness = np.concatenate((population_fitness,offspring_fitness))
-        next_population_index = np.argsort(combined_fitness)[:self.population_size]
-        fitness = combined_fitness[next_population_index]
-        self.population = combined_population[next_population_index]
-        print('Best fitness:',fitness[0])

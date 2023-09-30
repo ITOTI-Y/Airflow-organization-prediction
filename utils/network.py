@@ -16,10 +16,8 @@ class network:
     # "with_labels": True,
     }
 
-    def __init__(self,fig,ax,node_num=1) -> None:
+    def __init__(self,node_num=1) -> None:
         self.G = nx.DiGraph()
-        self.fig = fig
-        self.ax = ax
         self.create_nodes(node_num)
         pass
 
@@ -47,7 +45,37 @@ class network:
         # self.edge_list = self.make_edge_list(node_list)
         self.G.add_edges_from(edge_list)
     
-    def show(self,outdoor_node:list[int]=[]):
+    def show(self,outdoor_node:list[int]=[],P_dict=None,Q_dict=None):
         pos = nx.shell_layout(self.G)
         self.color_map(outdoor_node=outdoor_node)
+        if Q_dict:
+            keys = list(Q_dict.keys())
+            values = list(Q_dict.values())
+            new_edge_list = []
+            self.G.clear_edges()
+            for i in range(len(values)):
+                if float(values[i]) < 0:
+                    Q_dict[keys[i]] = -float(values[i])
+                    new_edge_list.append(keys[i][::-1])
+                else:
+                    new_edge_list.append(keys[i])
+            self.G.add_edges_from(new_edge_list)
+            nx.draw_networkx_edge_labels(self.G,pos,edge_labels=Q_dict)
+        if P_dict:
+            custom_label_pos = {}
+            for node, (x, y) in pos.items():
+                if node == 0:
+                    custom_label_pos[node] = (x, y-0.15)
+                    continue
+                elif y > pos[0][1]:
+                    custom_label_pos[node] = (x, y+0.15) 
+                    continue
+                elif y < pos[0][1]:
+                    custom_label_pos[node] = (x, y-0.15)
+                    continue
+                else:
+                    custom_label_pos[node] = (x+0.15, y)
+
+            # custom_label_pos = {node: (x, y-0.15) for node, (x, y) in pos.items()}
+            nx.draw_networkx_labels(self.G,custom_label_pos,labels=P_dict)
         nx.draw(self.G,pos,**self.options)
