@@ -41,13 +41,11 @@ class VNetwork:
             J = self.jacobian(B, BP, H, R)
             delta_P = solve(J, np.dot(B.T, Q))
             P -= delta_P
-            
             if np.linalg.norm(delta_P) < tol:
                 break
         P = P.tolist()
         P = [i[0] for i in P]
         Q = Q.tolist()
         Q = [i[0] for i in Q]
-        
         return P,Q
 

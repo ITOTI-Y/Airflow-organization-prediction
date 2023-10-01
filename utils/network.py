@@ -1,5 +1,6 @@
 import networkx as nx
 import numpy as np
+from copy import copy
 
 
 class network:
@@ -54,8 +55,8 @@ class network:
             new_edge_list = []
             self.G.clear_edges()
             for i in range(len(values)):
-                if float(values[i]) < 0:
-                    Q_dict[keys[i]] = -float(values[i])
+                if float(values[i]) <= 0:
+                    Q_dict[keys[i]] = abs(float(values[i]))
                     new_edge_list.append(keys[i][::-1])
                 else:
                     new_edge_list.append(keys[i])
@@ -67,15 +68,16 @@ class network:
                 if node == 0:
                     custom_label_pos[node] = (x, y-0.15)
                     continue
-                elif y > pos[0][1]:
+                elif y > pos[0][1] + 0.15:
                     custom_label_pos[node] = (x, y+0.15) 
                     continue
-                elif y < pos[0][1]:
+                elif y < pos[0][1] - 0.15:
                     custom_label_pos[node] = (x, y-0.15)
                     continue
                 else:
                     custom_label_pos[node] = (x+0.15, y)
+            
 
             # custom_label_pos = {node: (x, y-0.15) for node, (x, y) in pos.items()}
-            nx.draw_networkx_labels(self.G,custom_label_pos,labels=P_dict)
+            nx.draw_networkx_labels(self.G,custom_label_pos,labels=P_dict,font_color="red")
         nx.draw(self.G,pos,**self.options)
