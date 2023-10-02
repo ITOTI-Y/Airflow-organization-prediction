@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "airflow organization prediction"
+version = "0.1.0"
+description = "A visualization page for calculating ventilation nodes"
+authors = ["pan-b <'zhen_yu_@outlook.com'>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.9,<3.13"
+numpy = "^1.26.0"
+streamlit = "^1.27.1"
+scipy = "^1.11.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
