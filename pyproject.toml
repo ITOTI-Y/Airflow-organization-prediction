@@ -6,10 +6,12 @@ authors = ["pan-b <'zhen_yu_@outlook.com'>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.13"
+python = ">=3.9.10,<3.13"
 numpy = "^1.26.0"
 streamlit = "^1.27.1"
 scipy = "^1.11.3"
+matplotlib = "^3.8.0"
+networkx = "^3.1"
 
 
 [build-system]
