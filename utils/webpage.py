@@ -41,7 +41,7 @@ def out_node(node_num:int) -> list[int]:
     else:
         return []
 
-def pressure(session,out_node):
+def pressure(session,out_node:list[int]):
     st.write('Pressure')
     col1,col2,col3 = st.columns([1,1,1])
     result_dict = {}
@@ -61,6 +61,54 @@ def pressure(session,out_node):
         else:
             result_dict[i] = 0
     return result_dict
+
+def node_setting(session,node_num:int,out_node:list[int]):
+    result_dic = {}
+    people_num = {}
+    concentration  = {}
+    volume = {}
+    st.write('Node setting')
+    col1,col2,col3 = st.columns([1,1,1])
+    if not out_node or not session.edge_list:
+        return None
+    index = 0
+    for i in range(node_num):
+        if i == out_node[0]:
+            p_value = 0
+            c_value = col1.number_input(label='Outdoor ppm',value=400,key = i )
+            v_value = 1e20
+        elif index % 3 == 0:
+            ccol1,ccol2,ccol3 = col1.columns([1,1,1])
+            p_value = ccol1.number_input(f'N{i} num', step=1 ,format='%i')
+            c_value = ccol2.number_input(label= 'ppm',value=440, key = i)
+            v_value = ccol3.number_input(label='m3', key = f'v{i}')
+        elif index % 3 == 1:
+            ccol1,ccol2,ccol3 = col2.columns([1,1,1])
+            p_value = ccol1.number_input(f'N{i} num', step=1 ,format='%i')
+            c_value = ccol2.number_input(label= 'ppm',value=440, key = i)
+            v_value = ccol3.number_input(label='m3', key = f'v{i}')
+        else:
+            ccol1,ccol2,ccol3 = col3.columns([1,1,1])
+            p_value = ccol1.number_input(f'N{i} num', step=1 ,format='%i')
+            c_value = ccol2.number_input(label= 'ppm',value=440, key = i)
+            v_value = ccol3.number_input(label='m3', key = f'v{i}')
+
+        people_num[i] = p_value
+        concentration[i] = c_value
+        volume[i] = v_value
+        index += 1
+    result_dic['people_num'] = people_num
+    result_dic['concentration'] = concentration
+    result_dic['volume'] = volume
+    return result_dic
+
+def time_setting(session) ->tuple[float,float]:
+    if not out_node or not session.edge_list:
+        return None,None
+    col1,col2 = st.columns([1,1])
+    total_time = col1.number_input(label='Total Time (s)',step=0.01, format='%f')
+    delta_time = col2.number_input(label='Delta Time (s)',step=0.01, format='%f')
+    return total_time,delta_time
 
 def plot(session,node_num,edge_list,out_node,P=[],Q:list=[]):
     session.G = network(node_num)
@@ -85,8 +133,15 @@ def table_flow(modify_Q_dict):
     df['Target'] = [i[1] for i in list(modify_Q_dict.keys())]
     flow_list = []
     for i in modify_Q_dict.values():
-        # i = round(float(i),2)
-        flow_list.append(f'{i:.3f}')
-    df['Flow (kg/s)'] = flow_list
+        i = round(float(i),3)
+        flow_list.append(i)
+    df['Flow (m3/s)'] = flow_list
     df.sort_values(by=['Source','Target'],inplace=True)
     return df.T
+
+def table_concentration(c_series,node_num:int):
+    if c_series.any():
+        df = pd.DataFrame(c_series)
+        columns = ['Time (s)'] + [f'Node{i}' for i in range(node_num)]
+        df.columns = columns
+        st.dataframe(df,use_container_width=True)
