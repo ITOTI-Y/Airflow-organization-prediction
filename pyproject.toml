@@ -6,21 +6,17 @@ authors = ["pan-b <'zhen_yu_@outlook.com'>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">=3.9.10,<3.13"
+python = ">=3.10,<3.13"
 numpy = "^1.26.0"
 streamlit = "^1.27.1"
 scipy = "^1.11.3"
-matplotlib = "^3.8.0"
 networkx = "^3.1"
 ipykernel = "^6.26.0"
-torch = { version = "2.1.0+cu121", source="torch"}
-torchaudio = { version = ">=0.12.1", source="torch"}
-torchvision = { version = ">=0.13.1", source="torch"}
-
-[[tool.poetry.source]]
-name = "torch"
-url = "https://download.pytorch.org/whl/cu121"
-priority = "supplemental"
+ipywidgets = "^8.1.1"
+torch = { url = "https://download.pytorch.org/whl/cu121/torch-2.1.0%2Bcu121-cp310-cp310-win_amd64.whl"}
+torchvision = { url = "https://download.pytorch.org/whl/cu121/torchvision-0.16.0%2Bcu121-cp310-cp310-win_amd64.whl"}
+torchaudio = { url = "https://download.pytorch.org/whl/cu121/torchaudio-2.1.0%2Bcu121-cp310-cp310-win_amd64.whl"}
+matplotlib = "^3.8.1"
 
 
 [build-system]

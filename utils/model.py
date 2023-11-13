@@ -72,6 +72,11 @@ class OutConv(nn.Module):
 class UNet(nn.Module):
 
     def __init__(self,n_channels,n_classes,bilinear=True):
+        """
+            n_channels: 输入图片的通道数
+            n_classes: 标签的类别数
+            bilinear: 是否使用双线性插值进行上采样
+        """
         super().__init__()
         self.n_channels = n_channels
         self.n_classes = n_classes
@@ -100,67 +105,3 @@ class UNet(nn.Module):
         x = self.up4(x,x1)
         logits = self.outc(x)
         return logits
-    
-
-if __name__ == "__main__":
-    from torch.utils.data import DataLoader
-    from dataset import arc_dataset
-    from torch.utils.data import random_split
-    from tqdm import tqdm
-
-    def validate_model(model,val_loader,criterion):
-        model.eval() # 将模型设置为评估模式
-        total = 0
-        correct = 0
-        val_loss = 0
-        with torch.no_grad():
-            for image,mask in val_loader:
-                image = image.to(device)
-                mask = mask.to(device)
-                output = model(image)
-                _, predicted = torch.max(output.data, 1)
-                total += mask.nelement()
-                correct += (predicted == mask).sum().item()
-                val_loss += criterion(output, mask).item()
-        accuracy = correct / total
-        return accuracy, val_loss / len(val_loader)
-
-
-
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = UNet(1,2)
-    model.to(device)
-    criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(),lr=1e-3)
-    data = arc_dataset('./data/train/full_out/')
-    train_data,val_data,test_data = random_split(data,[0.4,0.1,0.5])
-
-
-
-    train_loader = DataLoader(train_data,batch_size=4,shuffle=True)
-    val_loader = DataLoader(val_data,batch_size=4,shuffle=True)
-    test_loader = DataLoader(test_data,batch_size=4,shuffle=True)
-    
-    epoch_num = 2
-    for epoch in range(epoch_num):
-        running_accuracy = 0.0
-        total_steps = len(train_loader)
-        for step,(image,mask) in enumerate(tqdm(train_loader)):
-            model.train()
-            image = image.to(device)
-            mask = mask.to(device)
-            output = model(image)
-            loss = criterion(output,mask)
-            _, predicted = torch.max(output.data, 1)
-            correct = (predicted == mask).sum().item()
-            accuracy = correct / (mask.size(0) * mask.size(1) * mask.size(2))
-            running_accuracy += accuracy
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            print(f'Step [{step+1}/{total_steps}], Loss: {loss.item()}, Accuracy: {running_accuracy/(step+1)}')
-        val_accuracy, val_loss = validate_model(model, val_loader, criterion)
-        print(f'Val Loss: {val_loss}, Val Accuracy: {val_accuracy}')
-    torch.save(model.state_dict(), 'best_model.pth')
-    # for name, param in model.named_parameters():
-    #     print(f'Parameter {name} has data type {param.dtype}')

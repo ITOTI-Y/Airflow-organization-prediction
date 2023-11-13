@@ -166,3 +166,4 @@ data/
 .conda
 .vscode
 /data
+/result

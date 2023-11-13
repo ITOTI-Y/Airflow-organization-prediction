@@ -8,7 +8,7 @@ from PIL import Image
 class arc_dataset(Dataset):
     transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Lambda(lambda x: x.float() / 13),
+        transforms.Lambda(lambda x: x / 255),
         transforms.Normalize(mean=[0.5],std=[0.5]),
     ])
 
@@ -39,26 +39,21 @@ class arc_dataset(Dataset):
             image_path = self.full_data_list.index(file_name)
         full_data = np.load(self.data_path + image_path)
         fig,ax = plt.subplots(1,2,figsize=(10,5))
-        ax[0].imshow(self._get_wall(full_data[:,:,0]),
+        im1 = ax[0].imshow(self._get_wall(full_data[:,:,0]),
         cmap='gray')
-        ax[1].imshow(self._get_room(full_data[:,:,0]),cmap='gray')
+        im2 = ax[1].imshow(self._get_room(full_data[:,:,0]),cmap='gray')
+        fig.colorbar(im1)
+        fig.colorbar(im2)
+        return self._get_wall(full_data[:,:,0])
 
     def _get_wall(self,full_data:np.ndarray):
         wall_data = full_data.copy()
-        wall_data = np.where(wall_data == 9,0,np.random.randint(1,255,wall_data.shape))
+        wall_data = np.where(wall_data == 9,0,1)
         return wall_data
     
     def _get_room(self,full_data:np.ndarray):
         room_data = full_data.copy()
-        room_data = np.where((room_data == 9) | (room_data == 13),0,1) # 如果是9或者13就是背景，否则就是房间
+        room_data = np.where((room_data != 8) & (room_data != 9) & (room_data != 13),2,room_data) # outdoor
+        room_data = np.where(room_data == 9,0,room_data) # wall
+        room_data = np.where((room_data == 13) | (room_data == 8),1,room_data) # room
         return room_data
-    
-
-if __name__ == '__main__':
-    data_path = './data/train'
-    transform = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
-    dataset = arc_dataset(data_path = './data/train',transform=transform)
-    dataloader = DataLoader(dataset, batch_size=4, shuffle=True)
