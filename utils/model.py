@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torchinfo import summary
 
 class DoubleConv(nn.Module):
 
@@ -13,7 +14,8 @@ class DoubleConv(nn.Module):
             nn.Conv2d(in_channels,mid_channels,kernel_size=3,padding=1),
             nn.BatchNorm2d(mid_channels),
             nn.ReLU(inplace=True),
-            nn.Conv2d(mid_channels,out_channels,kernel_size=3,padding=1),
+            nn.Dropout(0.5), # add dropout layer
+            nn.Conv2d(mid_channels,out_channels,kernel_size=5,padding=2),
             nn.BatchNorm2d(out_channels),
             nn.ReLU(inplace=True)
         )
@@ -55,7 +57,8 @@ class Up(nn.Module):
 
         x1 = F.pad(x1,[diffX // 2,diffX - diffX // 2,diffY // 2,diffY - diffY // 2])
         x = torch.cat([x2,x1],dim=1)
-        return self.conv(x)
+        x = self.conv(x)
+        return x
 
 class OutConv(nn.Module):
     """Convolutional layer for output"""
@@ -68,9 +71,9 @@ class OutConv(nn.Module):
         return self.conv(x)
 
 
-
-class UNet(nn.Module):
-
+class UNetplusplus(nn.Module):
+    num_branchs = 4
+    
     def __init__(self,n_channels,n_classes,bilinear=True):
         """
             n_channels: 输入图片的通道数
@@ -81,27 +84,73 @@ class UNet(nn.Module):
         self.n_channels = n_channels
         self.n_classes = n_classes
         self.bilinear = bilinear
-        self.inc = DoubleConv(n_channels,64)
-        self.down1 = Down(64,128)
-        self.down2 = Down(128,256)
-        self.down3 = Down(256,512)
-        self.down4 = Down(512,512)
-        self.up1 = Up(1024,256,bilinear)
-        self.up2 = Up(512,128,bilinear)
-        self.up3 = Up(256,64,bilinear)
-        self.up4 = Up(128,64,bilinear)
-        self.outc = OutConv(64,n_classes)
+        self.outc_weight = nn.Parameter(torch.ones(self.num_branchs))
+
+        self.inc = DoubleConv(n_channels,8)
+        self.down1 = Down(8,16)
+        self.down2 = Down(16,32)
+        self.down3 = Down(32,64)
+        self.down4 = Down(64,128)
+
+        self.up0_1 = Up(24,24,bilinear)
+        self.up0_2 = Up(48,24,bilinear)
+        self.up0_3 = Up(60,30,bilinear)
+        self.up0_4 = Up(84,84,bilinear)
+
+        self.up1_1 = Up(48,24,bilinear)
+        self.up1_2 = Up(72,36,bilinear)
+        self.up1_3 = Up(108,54,bilinear)
+
+        self.up2_1 = Up(96,48,bilinear)
+        self.up2_2 = Up(144,72,bilinear)
+
+        self.up3_1 = Up(192,96,bilinear)
 
 
+        self.aoutc1 = OutConv(24,n_classes)
+        self.aoutc2 = OutConv(24,n_classes)
+        self.aoutc3 = OutConv(30,n_classes)
+        self.aoutc4 = OutConv(84,n_classes)
+
+        self.adaptive_pool = nn.AdaptiveAvgPool2d((512,512))
+    
     def forward(self,x):
-        x1 = self.inc(x)
-        x2 = self.down1(x1)
-        x3 = self.down2(x2)
-        x4 = self.down3(x3)
-        x5 = self.down4(x4)
-        x = self.up1(x5,x4)
-        x = self.up2(x,x3)
-        x = self.up3(x,x2)
-        x = self.up4(x,x1)
-        logits = self.outc(x)
+
+        x0_0 = self.inc(x)
+        x1_0 = self.down1(x0_0)
+        x2_0 = self.down2(x1_0)
+        x3_0 = self.down3(x2_0)
+        x4_0 = self.down4(x3_0)
+
+        x0_1 = self.up0_1(x1_0,x0_0)
+        x1_1 = self.up1_1(x2_0,x1_0)
+        x2_1 = self.up2_1(x3_0,x2_0)
+        x3_1 = self.up3_1(x4_0,x3_0)
+
+        x0_2 = self.up0_2(x1_1,x0_1)
+        x1_2 = self.up1_2(x2_1,x1_1)
+        x2_2 = self.up2_2(x3_1,x2_1)
+
+        x0_3 = self.up0_3(x1_2,x0_2)
+        x1_3 = self.up1_3(x2_2,x1_2)
+
+        x0_4 = self.up0_4(x1_3,x0_3)
+
+
+        logits1 = self.aoutc1(x0_1)
+        logits2 = self.aoutc2(x0_2)
+        logits3 = self.aoutc3(x0_3)
+        logits4 = self.aoutc4(x0_4)
+
+        logits = 0
+        for i in range(self.num_branchs):
+            logits += self.outc_weight[i] * eval(f'logits{i+1}')
+        # logits = self.outc_weight[0] * logits1 + self.outc_weight[1] * logits2 + self.outc_weight[2] * logits3
+
         return logits
+    
+    def summary(self,input:(int,int,int,int) = (4,1,512,512)):
+        print(summary(self,input,col_names=["kernel_size", "output_size", "num_params", "mult_adds"],))
+
+class deeplabv3(nn.Module):
+    pass

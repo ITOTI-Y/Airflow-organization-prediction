@@ -44,7 +44,7 @@ class VNetwork:
             Q = self.flow_equation(BP, H, R)
             J = self.jacobian(B, BP, H, R)
             delta_P = solve(J, np.dot(B.T, Q))
-            P -= delta_P
+            P -= 0.1 * delta_P
             if np.linalg.norm(delta_P) < tol:
                 break
         P = P.tolist()
@@ -89,8 +89,9 @@ class Cal_concentration:
         step = int(self.total_t // self.delta_t)
         result = np.zeros((step,self.B.shape[0]))
         c_o = self.C0
+        result[0] = c_o
         time_series = np.arange(0,self.total_t,self.delta_t)
-        for i in range(step):
+        for i in range(1,step):
             qc = self.set_c_matrix(c_o)
             dc = (qc + self.S) / self.V
             c_n = c_o + dc * self.delta_t
