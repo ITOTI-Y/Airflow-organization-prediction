@@ -74,7 +74,7 @@ class OutConv(nn.Module):
 class UNetplusplus(nn.Module):
     num_branchs = 4
     
-    def __init__(self,n_channels,n_classes,bilinear=True):
+    def __init__(self,n_channels:int,n_classes:int,bilinear:bool=True):
         """
             n_channels: 输入图片的通道数
             n_classes: 标签的类别数

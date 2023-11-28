@@ -107,8 +107,8 @@ class image_data(Dataset):
         image = image.resize((512,512))
         image = np.array(image)
         image = np.where(image <= 25,0,image) # 室外，mask中为黑色0
-        image = np.where(image > 230,1,image) # 室内，mask中为白色255
-        image = np.where((image != 0) & (image != 1),2,image) # 墙壁，mask中为灰色128
+        image = np.where(image > 230,0,image) # 室内，mask中为白色255
+        image = np.where((image != 0) & (image != 1),1,image) # 墙壁，mask中为灰色128
         return image
     
     def random_show_image(self) -> None:

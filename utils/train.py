@@ -16,7 +16,7 @@ class model_setting():
     def __init__(self,model:torch.nn.Module,dataset:arc_dataset,epochs:int,batch_size:int,lr:float=1e-3,decay:float=1e-1):
         self.model = model
         self.model.to(self.device)
-        self.loss_weights = torch.tensor([1.0,1.0,1.0]).to(self.device)
+        self.loss_weights = torch.tensor([1.0,10.0]).to(self.device)
         self.criterion = Combinedloss(weights=self.loss_weights,alpha=0.5)
         self.optimizer = torch.optim.Adam(model.parameters(),lr=lr,weight_decay=decay)
         self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=10, gamma=0.2)
@@ -86,7 +86,7 @@ class model_setting():
         train_accuracy /= total_steps  # 计算平均准确率
         return train_accuracy
     
-    def predict(self,image:torch.Tensor = None,mode:str='test'):
+    def predict(self,image:torch.Tensor = None,mode:str='test',path:str = None):
         """
             Predict the output for a given image.
 
@@ -104,12 +104,17 @@ class model_setting():
         true_mask = data[num][1]
         image = image.unsqueeze(0)
         image = image.to(self.device)
-        output = self.best_model(image)
+        if path:
+            model = self.model
+            model.load_state_dict(torch.load(path))
+        else:
+            model = self.best_model
+        output = model(image)
         _, predicted = torch.max(output.data, 1)
         return image,true_mask,predicted
     
-    def show_predict(self,mode:str='test'):
-        image,true_mask,predicted = self.predict(mode=mode)
+    def show_predict(self,mode:str='test',path:str = None):
+        image,true_mask,predicted = self.predict(mode=mode, path = path)
         image = image.squeeze(0)
         image = image.cpu().numpy()
         image = np.transpose(image,(1,2,0))
