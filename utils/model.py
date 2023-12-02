@@ -73,13 +73,32 @@ class OutConv(nn.Module):
 
 
 class UNetplusplus(nn.Module):
+    """
+    
+    属性:
+        num_branchs (int): 分支数量
+        n_channels (int): 输入图片的通道数
+        n_classes (int): 标签的类别数
+        bilinear (bool): 是否使用双线性插值进行上采样
+        outc_weight (torch.Tensor): 输出权重
+        inc, down1, down2, down3, down4, up0_1, up0_2, up0_3, up0_4, up1_1, up1_2, up1_3, up2_1, up2_2, up3_1: UNet++的各层
+        aoutc1, aoutc2, aoutc3, aoutc4: 输出层
+        adaptive_pool (torch.nn.AdaptiveAvgPool2d): 自适应平均池化层
+
+    方法:
+        forward(x): 定义模型的前向传播
+        summary(input): 打印模型的概要信息
+    """
     num_branchs = 4
     
     def __init__(self,n_channels:int,n_classes:int,bilinear:bool=True):
         """
-            n_channels: 输入图片的通道数
-            n_classes: 标签的类别数
-            bilinear: 是否使用双线性插值进行上采样
+        初始化UNet++模型。
+
+        参数:
+            n_channels (int): 输入图片的通道数
+            n_classes (int): 标签的类别数
+            bilinear (bool): 是否使用双线性插值进行上采样
         """
         super().__init__()
         self.n_channels = n_channels
@@ -116,7 +135,15 @@ class UNetplusplus(nn.Module):
         self.adaptive_pool = nn.AdaptiveAvgPool2d((512,512))
     
     def forward(self,x):
+        """
+        定义模型的前向传播。
 
+        参数:
+            x (torch.Tensor): 输入数据
+
+        返回:
+            logits (torch.Tensor): 模型的输出
+        """
         x0_0 = self.inc(x)
         x1_0 = self.down1(x0_0)
         x2_0 = self.down2(x1_0)
@@ -146,11 +173,19 @@ class UNetplusplus(nn.Module):
         logits = 0
         for i in range(self.num_branchs):
             logits += self.outc_weight[i] * eval(f'logits{i+1}')
-        # logits = self.outc_weight[0] * logits1 + self.outc_weight[1] * logits2 + self.outc_weight[2] * logits3
 
         return logits
     
     def summary(self,input:(int,int,int,int) = (4,1,512,512)):
+        """
+        打印模型的概要信息。
+
+        参数:
+            input (tuple): 输入数据的形状，默认为(4,1,512,512)
+
+        返回:
+            None
+        """
         print(summary(self,input,col_names=["kernel_size", "output_size", "num_params", "mult_adds"],))
 
 #--------------------------------------------------------------------------#
