@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import torchvision
 from torchinfo import summary
 
 class DoubleConv(nn.Module):
@@ -152,5 +153,43 @@ class UNetplusplus(nn.Module):
     def summary(self,input:(int,int,int,int) = (4,1,512,512)):
         print(summary(self,input,col_names=["kernel_size", "output_size", "num_params", "mult_adds"],))
 
-class deeplabv3(nn.Module):
-    pass
+#--------------------------------------------------------------------------#
+
+class DetectionHead(nn.Module):
+    def __init__(self,num_classes,hidden_dim,num_queries=100):
+        super().__init__()
+        self.class_embed = torch.nn.Linear(hidden_dim, num_classes)
+        self.bbox_embed = torch.nn.Linear(hidden_dim, 4)
+        self.query_embed = torch.nn.Embedding(num_queries, hidden_dim)
+
+    def forward(self,x):
+        return self.class_embed(x),self.bbox_embed(x)
+
+
+class DETR(nn.Module):
+    def __init__(self,num_classes,hidden_dim,n_heads,num_encoder_layers,num_decoder_layers):
+        super().__init__()
+        self.backbone = self.detr_backbone()
+        self.transformer = self.create_transformer(hidden_dim,n_heads,num_encoder_layers,num_decoder_layers)
+        self.head = DetectionHead(num_classes,hidden_dim)
+
+    def detr_backbone(self):
+        backbone = torchvision.models.resnet50(weights=torchvision.models.ResNet50_Weights.DEFAULT)
+        backbone = nn.Sequential(*list(backbone.children())[:-2])
+        return backbone
+    
+    def create_transformer(self,hidden_dim,n_heads,num_encoder_layers,num_decoder_layers):
+        transformer = nn.Transformer(
+            d_model = hidden_dim,
+            nhead=n_heads,
+            num_encoder_layers=num_encoder_layers,
+            num_decoder_layers=num_decoder_layers
+        )
+        return transformer
+
+    def forward(self,x):
+        features = self.backbone(x)
+        features = features.flatten(2).permute(2,0,1)
+
+        output = self.transformer(features, features)
+        return self.head(output)

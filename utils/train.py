@@ -4,22 +4,21 @@ import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
 from matplotlib import pyplot as plt
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader,Dataset
 from torch.utils.data import random_split
 from tqdm.notebook import tqdm
-from utils.dataset import arc_dataset
 
 
 class model_setting():
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    def __init__(self,model:torch.nn.Module,dataset:arc_dataset,epochs:int,batch_size:int,lr:float=1e-3,decay:float=1e-1):
+    def __init__(self,model:torch.nn.Module,dataset:Dataset,epochs:int,batch_size:int,lr:float=1e-3,decay:float=1e-1,alpha:float = 0.2):
         self.model = model
         self.model.to(self.device)
-        self.loss_weights = torch.tensor([1.0,10.0]).to(self.device)
-        self.criterion = Combinedloss(weights=self.loss_weights,alpha=0.5)
+        self.loss_weights = torch.tensor([1.0,1.0,1.0]).to(self.device)
+        self.criterion = Combinedloss(weights=self.loss_weights,alpha=alpha)
         self.optimizer = torch.optim.Adam(model.parameters(),lr=lr,weight_decay=decay)
-        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=10, gamma=0.2)
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=4, gamma=0.1)
         self.dataset = dataset
         self.epochs = epochs
         self.batch_size = batch_size
@@ -58,6 +57,7 @@ class model_setting():
                 best_accuracy = val_accuracy
                 self.best_model = copy.deepcopy(self.model)
                 if save_path:
+                    self.show_predict()
                     print('save model')
                     torch.save(self.best_model.state_dict(),save_path + f'model_{val_accuracy:.2f}.pth')
     
