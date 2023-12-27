@@ -1,5 +1,5 @@
 {
     "commentTranslate.source": "intellsmi.deepl-translate-deepl",
     "commentTranslate.multiLineMerge": true,
-    "jupyter.debugJustMyCode": true
+    "jupyter.debugJustMyCode": false,
 }

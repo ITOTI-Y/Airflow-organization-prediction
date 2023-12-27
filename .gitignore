@@ -164,6 +164,7 @@ cython_debug/
 *.ipynb_checkpoints
 data/
 .conda
-.vscode
+.vscode/
 /data
 /result
+runs/
